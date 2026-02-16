@@ -244,27 +244,39 @@ export default {
   margin-bottom: 0.5rem;
 }
 
+.header h2 {
+  color: white;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
 .subtitle {
-  color: #666;
+  color: rgba(255, 255, 255, 0.8);
   margin-bottom: 2rem;
 }
 
 .loading {
   text-align: center;
   padding: 3rem;
-  color: #666;
+  color: white;
+  font-size: 1.1rem;
 }
 
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;
-  background: #f5f5f5;
-  border-radius: 8px;
+  background: var(--glass-white);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  box-shadow: var(--shadow-glass);
 }
 
 .empty-state p {
   margin-bottom: 1.5rem;
-  color: #666;
+  color: white;
+  font-size: 1.1rem;
 }
 
 .kb-grid {
@@ -274,16 +286,20 @@ export default {
 }
 
 .kb-card {
-  background: white;
+  background: var(--glass-white);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
   padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: transform 0.2s;
+  border-radius: 16px;
+  box-shadow: var(--shadow-glass);
+  transition: all 0.3s ease;
 }
 
 .kb-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glass-hover);
+  border-color: var(--border-glass-hover);
 }
 
 .kb-header {
@@ -296,6 +312,7 @@ export default {
 .kb-header h3 {
   margin: 0;
   font-size: 1.25rem;
+  color: white;
 }
 
 .kb-actions {
@@ -304,17 +321,18 @@ export default {
 }
 
 .btn-icon {
-  background: none;
-  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
   font-size: 1.2rem;
   cursor: pointer;
-  padding: 0.25rem;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  padding: 0.4rem 0.6rem;
+  transition: all 0.3s ease;
 }
 
 .btn-icon:hover {
-  opacity: 1;
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
 }
 
 .kb-info {
@@ -323,8 +341,12 @@ export default {
 
 .kb-info p {
   margin: 0.5rem 0;
-  color: #666;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 0.9rem;
+}
+
+.kb-info strong {
+  color: white;
 }
 
 .btn-block {
@@ -338,7 +360,9 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -346,11 +370,15 @@ export default {
 }
 
 .modal-content {
-  background: white;
+  background: var(--glass-white-strong);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--border-glass);
   padding: 2rem;
-  border-radius: 8px;
+  border-radius: 16px;
   max-width: 500px;
   width: 90%;
+  box-shadow: var(--shadow-glass-hover);
 }
 
 .modal-content.large {
@@ -359,6 +387,28 @@ export default {
 
 .modal-content h3 {
   margin-top: 0;
+  color: white;
+}
+
+.modal-content p,
+.modal-content label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+}
+
+.modal-content input:focus {
+  outline: none;
+  border-color: var(--border-glass-hover);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .modal-actions {
@@ -368,60 +418,63 @@ export default {
   margin-top: 1.5rem;
 }
 
-.btn-danger {
-  background: #dc3545;
-  color: white;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: #c82333;
-}
-
 .details-section {
   margin: 1.5rem 0;
 }
 
 .details-section h4 {
   margin-bottom: 0.75rem;
+  color: white;
+}
+
+.details-section p {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .details-section table {
   width: 100%;
   border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .details-section th,
 .details-section td {
   padding: 0.75rem;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--border-glass);
+  color: white;
 }
 
 .details-section th {
-  background: #f5f5f5;
+  background: rgba(255, 255, 255, 0.1);
   font-weight: 600;
 }
 
 .status-completed {
-  color: #28a745;
-  font-weight: 500;
+  color: rgba(255, 255, 255, 1);
+  font-weight: 600;
 }
 
 .status-processing {
-  color: #ffc107;
-  font-weight: 500;
+  color: rgba(255, 223, 186, 1);
+  font-weight: 600;
 }
 
 .status-failed {
-  color: #dc3545;
-  font-weight: 500;
+  color: rgba(255, 182, 193, 1);
+  font-weight: 600;
 }
 
 .error {
-  background: #f8d7da;
-  color: #721c24;
+  background: rgba(245, 87, 108, 0.2);
+  color: white;
   padding: 1rem;
-  border-radius: 4px;
+  border-radius: 8px;
   margin-top: 1rem;
+  border: 1px solid rgba(245, 87, 108, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 </style>

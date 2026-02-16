@@ -15,10 +15,11 @@ from services.openai_client import OpenAIClient
 from services.pdf_processor import PDFProcessor
 from services.embeddings import EmbeddingsService
 from services.chat import ChatService
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import shutil
 from pathlib import Path
 from config import get_config
+import requests
 
 app = FastAPI(title="KB Builder API", version="1.0.0")
 
@@ -48,6 +49,56 @@ async def scan_url(request: ScanUrlRequest):
         return ScanUrlResponse(pdfs=pdfs, total=len(pdfs))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/validate-pdfs")
+async def validate_pdfs(request: dict):
+    """Validate PDF URLs to check if they're accessible"""
+    try:
+        urls = request.get('urls', [])
+        results = []
+        
+        for url_info in urls:
+            url = url_info.get('url')
+            filename = url_info.get('filename')
+            
+            try:
+                # HEAD request to check if URL is accessible
+                response = requests.head(url, timeout=10, allow_redirects=True)
+                
+                if response.status_code == 200:
+                    status = 'available'
+                    reason = 'OK'
+                elif response.status_code == 404:
+                    status = 'unavailable'
+                    reason = '404 Not Found'
+                elif response.status_code == 403:
+                    status = 'unavailable'
+                    reason = '403 Forbidden'
+                else:
+                    status = 'unavailable'
+                    reason = f'HTTP {response.status_code}'
+                    
+            except requests.exceptions.Timeout:
+                status = 'unavailable'
+                reason = 'Timeout'
+            except requests.exceptions.ConnectionError:
+                status = 'unavailable'
+                reason = 'Connection Error'
+            except Exception as e:
+                status = 'unavailable'
+                reason = str(e)[:50]
+            
+            results.append({
+                'url': url,
+                'filename': filename,
+                'status': status,
+                'reason': reason
+            })
+        
+        return {'results': results}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/bedrock/models", response_model=BedrockModelsResponse)
 async def get_bedrock_models():
@@ -138,7 +189,7 @@ async def update_knowledge_base(kb_id: int, request: UpdateKBRequest, db: Sessio
             raise HTTPException(status_code=404, detail="Knowledge base not found")
         
         kb.name = request.name
-        kb.updated_at = datetime.utcnow()
+        kb.updated_at = datetime.now(timezone.utc)
         db.commit()
         
         return {"message": "Knowledge base updated successfully"}
@@ -194,7 +245,7 @@ async def create_knowledge_base(request: CreateKBRequest, db: Session = Depends(
             if not api_key:
                 raise HTTPException(
                     status_code=400, 
-                    detail="API key is required for OpenAI provider. Either provide it in the request or set it in backend/config.yml"
+                    detail="OpenAI API key not found. Please add it to backend/config.yml. See backend/config.example.yml for reference."
                 )
         else:
             print("Using API key from request")
@@ -206,8 +257,8 @@ async def create_knowledge_base(request: CreateKBRequest, db: Session = Depends(
             model_id=request.model_id,
             provider=request.provider,
             api_key=api_key,  # Store the API key (from request or config)
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         db.add(kb)
         db.commit()
@@ -245,7 +296,7 @@ async def create_knowledge_base(request: CreateKBRequest, db: Session = Depends(
                     file_path=file_path,
                     page_count=page_count,
                     status='processing',
-                    added_at=datetime.utcnow()
+                    added_at=datetime.now(timezone.utc)
                 )
                 db.add(document)
                 db.commit()
@@ -323,7 +374,7 @@ async def chat_with_kb(kb_id: int, request: ChatRequest, db: Session = Depends(g
             kb_id=kb_id,
             user_message=request.message,
             bot_response=result['response'],
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         db.add(history)
         db.commit()
@@ -348,7 +399,7 @@ async def get_chat_history(kb_id: int, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Knowledge base not found")
         
         # Get history from last 7 days
-        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
         history = db.query(ChatHistory).filter(
             ChatHistory.kb_id == kb_id,
             ChatHistory.timestamp >= seven_days_ago
@@ -375,7 +426,7 @@ async def get_chat_history(kb_id: int, db: Session = Depends(get_db)):
 async def cleanup_old_history(db: Session = Depends(get_db)):
     """Delete chat history older than 7 days"""
     try:
-        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
         deleted = db.query(ChatHistory).filter(
             ChatHistory.timestamp < seven_days_ago
         ).delete()

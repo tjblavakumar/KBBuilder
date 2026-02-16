@@ -34,6 +34,11 @@ export const useKBStore = defineStore('kb', () => {
     defaultModel.value = defaultModelId
   }
 
+  function resetCreateKBState() {
+    pdfs.value = []
+    selectedPdfs.value = []
+  }
+
   return {
     currentKB,
     pdfs,
@@ -44,6 +49,7 @@ export const useKBStore = defineStore('kb', () => {
     setPdfs,
     togglePdf,
     clearSelectedPdfs,
-    setModels
+    setModels,
+    resetCreateKBState
   }
 })

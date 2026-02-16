@@ -79,8 +79,8 @@ Open your browser to http://localhost:5173
 4. **Configure**:
    - Enter KB name
    - Provider: OpenAI (default) or AWS Bedrock
-   - API Key: Leave empty if configured in config.yml
    - Select model (GPT-4o Mini recommended)
+   - Note: API key is read from `backend/config.yml`
 5. Click "Build KB" and wait for processing
 
 ### Chatting with Your KB

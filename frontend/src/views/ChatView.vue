@@ -1,7 +1,7 @@
 <template>
   <div class="chat-view">
     <div class="chat-header">
-      <h2>Chat with Knowledge Base</h2>
+      <h2>{{ kbName }}</h2>
       <router-link to="/" class="btn btn-secondary">Back to Home</router-link>
     </div>
 
@@ -12,7 +12,8 @@
             <strong>You:</strong> {{ msg.user }}
           </div>
           <div class="message bot">
-            <strong>Assistant:</strong> {{ msg.bot }}
+            <strong>Assistant:</strong>
+            <div class="markdown-content" v-html="renderMarkdown(msg.bot)"></div>
             <div v-if="msg.sources && msg.sources.length > 0" class="sources">
               <details>
                 <summary>Sources ({{ msg.sources.length }})</summary>
@@ -46,10 +47,17 @@
 </template>
 
 <script>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from '../composables/useToast'
 import api from '../services/api'
+import { marked } from 'marked'
+
+// Configure marked for better rendering
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
 
 export default {
   name: 'ChatView',
@@ -57,14 +65,26 @@ export default {
     const route = useRoute()
     const toast = useToast()
     const kbId = ref(route.params.id)
+    const kbName = ref('Loading...')
     const messages = ref([])
     const userInput = ref('')
     const loading = ref(false)
     const messagesContainer = ref(null)
 
     onMounted(async () => {
+      await loadKBInfo()
       await loadHistory()
     })
+
+    async function loadKBInfo() {
+      try {
+        const response = await api.getKB(kbId.value)
+        kbName.value = response.data.name
+      } catch (err) {
+        console.error('Failed to load KB info:', err)
+        kbName.value = 'Knowledge Base'
+      }
+    }
 
     async function loadHistory() {
       try {
@@ -114,12 +134,18 @@ export default {
       }
     }
 
+    function renderMarkdown(text) {
+      return marked(text)
+    }
+
     return {
+      kbName,
       messages,
       userInput,
       loading,
       messagesContainer,
-      sendMessage
+      sendMessage,
+      renderMarkdown
     }
   }
 }
@@ -141,13 +167,21 @@ export default {
   margin-bottom: 1rem;
 }
 
+.chat-header h2 {
+  color: white;
+  font-size: 1.8rem;
+}
+
 .chat-container {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: var(--glass-white);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  box-shadow: var(--shadow-glass);
   overflow: hidden;
 }
 
@@ -163,18 +197,28 @@ export default {
 
 .message {
   padding: 1rem;
-  border-radius: 8px;
+  border-radius: 12px;
   margin-bottom: 0.5rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-glass);
+  transition: all 0.3s ease;
+}
+
+.message:hover {
+  transform: translateX(2px);
 }
 
 .message.user {
-  background: #e3f2fd;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
   margin-left: 20%;
+  color: white;
 }
 
 .message.bot {
-  background: #f5f5f5;
+  background: rgba(255, 255, 255, 0.1);
   margin-right: 20%;
+  color: white;
 }
 
 .message.loading {
@@ -182,33 +226,152 @@ export default {
   font-style: italic;
 }
 
+.message strong {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.markdown-content {
+  margin-top: 0.5rem;
+  line-height: 1.6;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  color: white;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.markdown-content h1 {
+  font-size: 1.5rem;
+}
+
+.markdown-content h2 {
+  font-size: 1.3rem;
+}
+
+.markdown-content h3 {
+  font-size: 1.1rem;
+}
+
+.markdown-content p {
+  margin: 0.5rem 0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.markdown-content li {
+  margin: 0.25rem 0;
+}
+
+.markdown-content code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.markdown-content pre {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.markdown-content blockquote {
+  border-left: 3px solid rgba(255, 255, 255, 0.5);
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0;
+}
+
+.markdown-content table th,
+.markdown-content table td {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.markdown-content table th {
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+}
+
+.markdown-content a {
+  color: rgba(144, 238, 144, 1);
+  text-decoration: underline;
+}
+
+.markdown-content a:hover {
+  color: rgba(173, 255, 173, 1);
+}
+
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  margin: 1rem 0;
+}
+
 .sources {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid var(--border-glass);
 }
 
 .sources summary {
   cursor: pointer;
   font-weight: 500;
-  color: #2c3e50;
+  color: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.sources summary:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .source {
-  background: white;
+  background: rgba(255, 255, 255, 0.1);
   padding: 0.75rem;
   margin: 0.5rem 0;
-  border-left: 3px solid #42b983;
-  border-radius: 4px;
+  border-left: 3px solid rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .source strong {
-  color: #2c3e50;
+  color: rgba(255, 255, 255, 1);
+  font-weight: 600;
 }
 
 .source p {
   margin: 0.5rem 0 0 0;
-  color: #666;
+  color: rgba(255, 255, 255, 0.8);
   font-size: 0.9rem;
 }
 
@@ -216,18 +379,33 @@ export default {
   display: flex;
   gap: 0.5rem;
   padding: 1rem;
-  border-top: 1px solid #ddd;
-  background: #f9f9f9;
+  border-top: 1px solid var(--border-glass);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .input-area textarea {
   flex: 1;
   padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
   resize: none;
   font-family: inherit;
   font-size: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.input-area textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.input-area textarea:focus {
+  outline: none;
+  border-color: var(--border-glass-hover);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .input-area button {

@@ -39,10 +39,15 @@ export default {
 
 <style scoped>
 .navbar {
-  background: #2c3e50;
+  background: var(--glass-white);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
   color: white;
   padding: 1rem 0;
   margin-bottom: 2rem;
+  border-radius: 16px;
+  box-shadow: var(--shadow-glass);
 }
 
 .navbar .container {
@@ -54,6 +59,11 @@ export default {
 .logo {
   margin: 0;
   font-size: 1.5rem;
+  background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
 }
 
 .nav-links {
@@ -65,12 +75,15 @@ export default {
   color: white;
   text-decoration: none;
   padding: 0.5rem 1rem;
-  border-radius: 4px;
-  transition: background 0.3s;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
 }
 
 .nav-links a:hover,
 .nav-links a.router-link-active {
-  background: #34495e;
+  background: var(--glass-white-soft);
+  border-color: var(--border-glass);
+  transform: translateY(-1px);
 }
 </style>

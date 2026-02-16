@@ -13,6 +13,11 @@ export default {
     return api.post('/scan-url', { url })
   },
 
+  // Validate PDF URLs
+  validatePdfs(urls) {
+    return api.post('/validate-pdfs', { urls })
+  },
+
   // Get models (Bedrock or OpenAI)
   getModels(provider = 'bedrock') {
     return api.get(`/${provider}/models`)
