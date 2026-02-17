@@ -1,0 +1,98 @@
+PROJECT: AI-Powered Knowledge Base Builder for Regulatory Documents
+
+OVERVIEW:
+Build a local single-user web application that allows users to create multiple 
+AI-powered knowledge bases from PDF documents discovered on websites, with 
+individual chatbot interfaces for each knowledge base.
+
+TECH STACK:
+- Frontend: Vue.js
+- Backend: FastAPI (Python)
+- Database: SQLite (metadata, chat history)
+- Vector Database: ChromaDB
+- LLM: AWS Bedrock (Claude 3.5 Sonnet v1 default, user-selectable)
+- Embeddings: AWS Bedrock Titan Embeddings
+- PDF Processing: PyMuPDF
+- Web Scraping: BeautifulSoup + requests
+- Auth: AWS SSO (aws configure sso)
+
+CORE FEATURES:
+
+1. PDF Discovery & Selection
+   - User enters website URL
+   - System scans and extracts all PDF download links
+   - Display PDFs in tabular format (filename, size, URL)
+   - Allow multi-select checkboxes
+   - Support adding multiple URLs
+   - Show aggregated list from all URLs
+
+2. Knowledge Base Creation
+   - User names the KB
+   - User selects AWS Bedrock model from available models
+   - Click "Build KB" button
+   - Download selected PDFs to data/kb_<id>/pdfs/
+   - Extract text using PyMuPDF
+   - Chunk text (semantic, 1000 tokens, 150 overlap)
+   - Generate embeddings via Bedrock Titan
+   - Store vectors in ChromaDB (data/kb_<id>/chroma/)
+   - Show progress indicator
+
+3. Chat Interface
+   - Separate chat UI for each KB
+   - RAG-based responses using selected Bedrock model
+   - Display source references (PDF name, page number)
+   - Store chat history in SQLite
+   - Auto-delete history older than 7 days
+
+4. KB Management (CRUD)
+   - List all knowledge bases
+   - Edit KB (rename, add/remove documents)
+   - Delete KB (remove all files, vectors, history)
+   - View KB details (document count, size, created date)
+
+DATABASE SCHEMA:
+- knowledgebases: id, name, model_id, created_at, updated_at
+- documents: id, kb_id, filename, url, file_path, page_count, status, added_at
+- chat_history: id, kb_id, user_message, bot_response, timestamp
+
+API ENDPOINTS:
+- POST /api/scan-url - Discover PDFs from URL
+- GET /api/bedrock/models - List available Bedrock models
+- POST /api/kb - Create knowledge base
+- GET /api/kb - List all KBs
+- GET /api/kb/{id} - Get KB details
+- PUT /api/kb/{id} - Update KB
+- DELETE /api/kb/{id} - Delete KB
+- POST /api/kb/{id}/chat - Chat with KB
+- GET /api/kb/{id}/history - Get chat history
+
+FOLDER STRUCTURE:
+project/
+├── backend/
+│   ├── app.py
+│   ├── models.py
+│   ├── services/
+│   │   ├── scraper.py
+│   │   ├── pdf_processor.py
+│   │   ├── embeddings.py
+│   │   ├── chat.py
+│   │   └── bedrock_client.py
+│   └── database.py
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── views/
+│   │   └── App.vue
+├── data/
+│   ├── kb_<id>/
+│   │   ├── pdfs/
+│   │   └── chroma/
+└── kb_builder.db
+
+DEVELOPMENT PHASES:
+Phase 1: Backend setup + PDF discovery
+Phase 2: PDF processing + embeddings + ChromaDB
+Phase 3: Chat interface + RAG implementation
+Phase 4: Frontend UI (Vue)
+Phase 5: KB management CRUD
+Phase 6: Polish + error handling + cleanup job
