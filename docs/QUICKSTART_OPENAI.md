@@ -53,30 +53,40 @@ VITE ready in XXX ms
 Local: http://localhost:5173/
 ```
 
-## Step 4: Create Your First OpenAI Knowledge Base
+## Step 4: Set Session API Key (Admin)
 
 1. **Open browser**: Navigate to `http://localhost:5173`
 
-2. **Click "Create New"**
+2. Click **Admin** in the top navigation
 
-3. **Step 1 - Discover PDFs**:
+3. Paste OpenAI API key: `sk-...`
+
+4. Click **Save** and wait for validation success
+
+5. Confirm top nav shows **OpenAI Ready**
+
+## Step 5: Create Your First OpenAI Knowledge Base
+
+1. **Click "+ New KB"**
+
+2. **Step 1 - Discover PDFs**:
    - Enter a website URL with PDFs
    - Click "Scan"
    - Select the PDFs you want
    - Click "Next"
 
-4. **Step 2 - Configure**:
+3. **Step 2 - Configure**:
    - Enter a name: "My OpenAI KB"
    - Select Provider: **OpenAI**
-   - Enter your API key: `sk-...`
+   - Use session key from Admin (no API key field required)
    - Select Model: **GPT-4o Mini** (recommended for cost)
    - Click "Build KB"
 
-5. **Wait for processing** (may take 1-2 minutes)
+4. **Wait for processing** (may take 1-2 minutes)
 
-6. **Start chatting!**
+5. **Start chatting!**
 
-## Step 5: Test It Out
+## Step 6: Test It Out
 
 Try these questions:
 - "What is this document about?"
@@ -85,10 +95,10 @@ Try these questions:
 
 ## Troubleshooting
 
-### "API key is required for OpenAI provider"
-→ Make sure you entered your API key in Step 2
+### "OpenAI API key required for this session"
+→ Open **Admin** and set your key again for this session
 
-### "OpenAI invocation failed: Incorrect API key"
+### "OpenAI API key is invalid"
 → Check your API key is valid and has credits
 
 ### "Failed to generate embedding"
@@ -134,9 +144,9 @@ Each KB remembers its provider and settings.
 
 ## Security Reminder
 
-🔒 Your API key is stored in the local database. For production use:
-- Implement API key encryption
-- Use environment variables
+🔒 OpenAI key is session-only in browser memory in this flow (not persisted by new requests). For production use:
+- Use HTTPS/TLS
+- Use server-side secret management if persistence is required
 - Never commit API keys to git
 
 ---

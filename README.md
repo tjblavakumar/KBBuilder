@@ -41,10 +41,6 @@ venv\Scripts\activate.bat  # Windows
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure API key
-cp config.example.yml config.yml
-nano config.yml  # Add your OpenAI API key
-
 cd ..
 ```
 
@@ -60,7 +56,7 @@ cd ..
 
 ```bash
 # Make sure you're in the project root with venv activated
-./start-simple.sh
+./start.sh
 ```
 
 The application will start:
@@ -80,7 +76,7 @@ Open your browser to http://localhost:5173
    - Enter KB name
    - Provider: OpenAI (default) or AWS Bedrock
    - Select model (GPT-4o Mini recommended)
-   - Note: API key is read from `backend/config.yml`
+   - For OpenAI: Click `Admin` in the top bar, paste your API key, and save (validated immediately)
 5. Click "Build KB" and wait for processing
 
 ### Chatting with Your KB
@@ -95,18 +91,9 @@ Open your browser to http://localhost:5173
 ### OpenAI Setup (Recommended)
 
 1. **Get API Key**: https://platform.openai.com/api-keys
-2. **Configure**:
-   ```bash
-   cd backend
-   cp config.example.yml config.yml
-   nano config.yml
-   ```
-3. **Add your key**:
-   ```yaml
-   openai:
-     api_key: "sk-proj-your-key-here"
-     default_model: "gpt-4o-mini"
-   ```
+2. In the app, open **Admin** from the top navigation
+3. Paste your API key and click **Save**
+4. The key is validated immediately and used for this browser session only
 
 ### AWS Bedrock Setup (Optional)
 
@@ -124,7 +111,7 @@ Open your browser to http://localhost:5173
 
 ### Start Services
 ```bash
-./start-simple.sh
+./start.sh
 ```
 
 ### Stop Services
@@ -188,8 +175,8 @@ Frontend (Vue.js) → Backend (FastAPI) → LLM Provider
 ## 🐛 Troubleshooting
 
 ### "API key is required"
-- Add your API key to `backend/config.yml`
-- Or enter it manually when creating a KB
+- Open **Admin** in the top bar
+- Paste your OpenAI API key and click **Save**
 
 ### "Incorrect API key provided"
 - Verify your API key at https://platform.openai.com/api-keys
@@ -202,7 +189,7 @@ Frontend (Vue.js) → Backend (FastAPI) → LLM Provider
 cd backend
 pip install -r requirements.txt
 cd ..
-./start-simple.sh
+./start.sh
 ```
 
 ### Frontend errors
@@ -230,10 +217,12 @@ cat frontend.log
 ## 🔐 Security Notes
 
 ⚠️ **Important**:
-- API keys are stored in plain text in `config.yml` and database
-- Suitable for development and personal use
+- OpenAI API keys are session-only in memory (entered via **Admin**)
+- New keys are not persisted to database or config by the app
+- Session key is cleared when browser tab/app is refreshed or closed
 - For production:
-  - Encrypt API keys before storage
+  - Add TLS/HTTPS between browser and backend
+  - Use a secure server-side secrets manager if persistent credentials are needed
   - Use environment variables
   - Implement key rotation
   - Add audit logging

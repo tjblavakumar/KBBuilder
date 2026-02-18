@@ -6,7 +6,7 @@ This project now supports both AWS Bedrock and OpenAI as LLM providers!
 
 - **Dual Provider Support**: Choose between AWS Bedrock or OpenAI when creating a knowledge base
 - **Flexible Model Selection**: Access to GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo, and more
-- **Secure API Key Storage**: OpenAI API keys are stored per knowledge base
+- **Session-Only OpenAI Keys**: Key is entered from Admin, validated immediately, and used only for current session
 - **Unified Interface**: Same chat experience regardless of provider
 
 ## Setup Instructions
@@ -47,7 +47,7 @@ This adds the `provider` and `api_key` columns to existing knowledge bases.
 2. Scan and select your PDFs
 3. In Step 2:
    - Select **Provider**: Choose "OpenAI"
-   - Enter your **OpenAI API Key**
+   - Set your **OpenAI API Key** from **Admin** (top nav)
    - Select a **Model** (e.g., GPT-4o Mini for cost-effective option)
 4. Build your knowledge base
 
@@ -93,17 +93,26 @@ Both providers generate high-quality embeddings for semantic search.
 
 ## Security Notes
 
-⚠️ **Important**: 
-- API keys are stored in the database in plain text in this version
-- For production use, implement encryption for API keys
+⚠️ **Important**:
+- OpenAI key is session-only in browser memory in the new flow
+- New requests do not persist API keys in DB/config
+- Legacy persisted keys can be removed with `POST /api/admin/cleanup-api-keys` or `backend/cleanup_api_keys.py`
+- For production, use HTTPS and secure server-side secret handling where persistence is required
 - Never commit API keys to version control
-- Consider using environment variables for shared keys
 
 ## API Endpoints
 
 ### Get OpenAI Models
 ```
 GET /api/openai/models
+```
+
+### Validate OpenAI API Key
+```
+POST /api/openai/validate-key
+{
+  "api_key": "sk-..."
+}
 ```
 
 ### Get Bedrock Models
@@ -117,7 +126,7 @@ POST /api/kb
 {
   "name": "My KB",
   "provider": "openai",  // or "bedrock"
-  "api_key": "sk-...",   // required for OpenAI
+  "api_key": "sk-...",   // optional in payload if session header is used
   "model_id": "gpt-4o-mini",
   "documents": [...]
 }
@@ -125,9 +134,9 @@ POST /api/kb
 
 ## Troubleshooting
 
-### "API key is required for OpenAI provider"
-- Make sure you've entered a valid OpenAI API key
-- Key should start with `sk-`
+### "OpenAI API key required for this session"
+- Open **Admin** and set a valid OpenAI API key
+- Make sure validation succeeded before creating/chatting
 
 ### "OpenAI invocation failed"
 - Check your API key is valid

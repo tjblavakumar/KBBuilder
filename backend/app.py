@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -18,8 +18,9 @@ from services.chat import ChatService
 from datetime import datetime, timedelta, timezone
 import shutil
 from pathlib import Path
-from config import get_config
 import requests
+import traceback
+from openai import OpenAI
 
 app = FastAPI(title="KB Builder API", version="1.0.0")
 
@@ -121,6 +122,26 @@ async def get_openai_models():
         return OpenAIModelsResponse(models=models, default_model=default_model)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/openai/validate-key")
+async def validate_openai_api_key(request: dict):
+    """Validate an OpenAI API key for chat+embedding usage."""
+    api_key = (request.get("api_key") or "").strip()
+    if not api_key:
+        raise HTTPException(status_code=400, detail="OpenAI API key is required")
+
+    try:
+        client = OpenAI(api_key=api_key)
+        # Validate against the exact API capability this app needs.
+        client.embeddings.create(model="text-embedding-3-small", input="key validation ping")
+        return {"valid": True, "message": "OpenAI API key is valid"}
+    except Exception as e:
+        error_text = str(e).lower()
+        if "incorrect api key" in error_text or "invalid api key" in error_text:
+            raise HTTPException(status_code=401, detail="OpenAI API key is invalid")
+        if "insufficient_quota" in error_text or "quota" in error_text:
+            raise HTTPException(status_code=402, detail="OpenAI quota exceeded or billing issue")
+        raise HTTPException(status_code=400, detail=f"OpenAI key validation failed: {str(e)}")
 
 @app.get("/api/kb", response_model=KBListResponse)
 async def list_knowledge_bases(db: Session = Depends(get_db)):
@@ -224,12 +245,14 @@ async def delete_knowledge_base(kb_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/kb", response_model=CreateKBResponse)
-async def create_knowledge_base(request: CreateKBRequest, db: Session = Depends(get_db)):
+async def create_knowledge_base(
+    request: CreateKBRequest,
+    db: Session = Depends(get_db),
+    session_openai_key: str | None = Header(default=None, alias="X-Session-OpenAI-Key")
+):
     """Create a new knowledge base with PDF processing and embeddings"""
     import traceback
     try:
-        config = get_config()
-        
         print(f"\n{'='*60}")
         print(f"Creating Knowledge Base: {request.name}")
         print(f"Provider: {request.provider}")
@@ -237,18 +260,13 @@ async def create_knowledge_base(request: CreateKBRequest, db: Session = Depends(
         print(f"Documents: {len(request.documents)}")
         print(f"{'='*60}\n")
         
-        # Use API key from request, or fall back to config
-        api_key = request.api_key
-        if request.provider == 'openai' and not api_key:
-            print("Using API key from config.yml")
-            api_key = config.get_openai_api_key()
-            if not api_key:
-                raise HTTPException(
-                    status_code=400, 
-                    detail="OpenAI API key not found. Please add it to backend/config.yml. See backend/config.example.yml for reference."
-                )
-        else:
-            print("Using API key from request")
+        # Use a transient key for this request only (never store in DB)
+        request_api_key = request.api_key or session_openai_key
+        if request.provider == 'openai' and not request_api_key:
+            raise HTTPException(
+                status_code=400,
+                detail="OpenAI API key required for this session. Use Admin in the top bar to set it."
+            )
         
         # Create KB record
         print("Step 1: Creating KB record in database...")
@@ -256,7 +274,7 @@ async def create_knowledge_base(request: CreateKBRequest, db: Session = Depends(
             name=request.name,
             model_id=request.model_id,
             provider=request.provider,
-            api_key=api_key,  # Store the API key (from request or config)
+            api_key=None,  # Never persist provider keys
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc)
         )
@@ -268,7 +286,7 @@ async def create_knowledge_base(request: CreateKBRequest, db: Session = Depends(
         # Initialize services
         print("Step 2: Initializing services...")
         pdf_processor = PDFProcessor(kb.id)
-        embeddings_service = EmbeddingsService(kb.id, request.provider, api_key)
+        embeddings_service = EmbeddingsService(kb.id, request.provider, request_api_key)
         print("✓ Services initialized\n")
         
         all_chunks = []
@@ -355,7 +373,12 @@ async def create_knowledge_base(request: CreateKBRequest, db: Session = Depends(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/kb/{kb_id}/chat", response_model=ChatResponse)
-async def chat_with_kb(kb_id: int, request: ChatRequest, db: Session = Depends(get_db)):
+async def chat_with_kb(
+    kb_id: int,
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+    session_openai_key: str | None = Header(default=None, alias="X-Session-OpenAI-Key")
+):
     """Chat with a knowledge base using RAG"""
     try:
         # Get KB
@@ -363,8 +386,16 @@ async def chat_with_kb(kb_id: int, request: ChatRequest, db: Session = Depends(g
         if not kb:
             raise HTTPException(status_code=404, detail="Knowledge base not found")
         
+        # Resolve provider key with request/session precedence
+        effective_api_key = request.api_key or session_openai_key or kb.api_key
+        if kb.provider == 'openai' and not effective_api_key:
+            raise HTTPException(
+                status_code=400,
+                detail="OpenAI API key required for this session. Use Admin in the top bar to set it."
+            )
+
         # Initialize chat service with provider info
-        chat_service = ChatService(kb_id, kb.model_id, kb.provider, kb.api_key)
+        chat_service = ChatService(kb_id, kb.model_id, kb.provider, effective_api_key)
         
         # Get response
         result = chat_service.chat(request.message)
@@ -387,6 +418,54 @@ async def chat_with_kb(kb_id: int, request: ChatRequest, db: Session = Depends(g
     except HTTPException:
         raise
     except Exception as e:
+        # Log full traceback for backend diagnostics
+        print(f"ERROR in chat_with_kb(kb_id={kb_id}): {str(e)}")
+        print(traceback.format_exc())
+
+        error_text = str(e).lower()
+        if "incorrect api key" in error_text or "invalid api key" in error_text:
+            raise HTTPException(
+                status_code=401,
+                detail="OpenAI API key is invalid. Set a valid key via Admin (session)."
+            )
+        if "insufficient_quota" in error_text or "quota" in error_text:
+            raise HTTPException(
+                status_code=402,
+                detail="OpenAI quota exceeded or billing issue. Check your OpenAI billing/credits and try again."
+            )
+        if "connection error" in error_text or "api connection" in error_text:
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to reach OpenAI API. Check internet access/DNS and try again."
+            )
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Chat request failed: {str(e)}"
+        )
+
+@app.post("/api/admin/cleanup-api-keys")
+async def cleanup_stored_api_keys(db: Session = Depends(get_db)):
+    """Remove legacy persisted API keys from all knowledge base records."""
+    try:
+        updated = (
+            db.query(KnowledgeBase)
+            .filter(KnowledgeBase.api_key.isnot(None))
+            .update(
+                {
+                    KnowledgeBase.api_key: None,
+                    KnowledgeBase.updated_at: datetime.now(timezone.utc)
+                },
+                synchronize_session=False
+            )
+        )
+        db.commit()
+        return {
+            "message": f"Cleared API keys for {updated} knowledge base(s).",
+            "updated": updated
+        }
+    except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/kb/{kb_id}/history", response_model=ChatHistoryResponse)

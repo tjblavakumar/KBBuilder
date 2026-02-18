@@ -2,7 +2,7 @@
   <div class="home">
     <div class="header">
       <h2>Knowledge Bases</h2>
-      <router-link to="/create" class="btn btn-primary">+ Create New</router-link>
+      <router-link to="/create" class="btn btn-primary">+ New KB</router-link>
     </div>
     <p class="subtitle">Manage your AI-powered knowledge bases</p>
     
@@ -289,17 +289,21 @@ export default {
   background: var(--glass-white);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-glass);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
   padding: 1.5rem;
   border-radius: 16px;
-  box-shadow: var(--shadow-glass);
+  box-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.22),
+    0 2px 6px rgba(79, 70, 229, 0.25);
   transition: all 0.3s ease;
 }
 
 .kb-card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--shadow-glass-hover);
-  border-color: var(--border-glass-hover);
+  box-shadow:
+    0 18px 36px rgba(15, 23, 42, 0.28),
+    0 4px 12px rgba(79, 70, 229, 0.35);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .kb-header {

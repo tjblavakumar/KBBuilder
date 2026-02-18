@@ -60,7 +60,7 @@
           <option value="openai">OpenAI</option>
         </select>
         <small class="help-text" v-if="selectedProvider === 'openai'">
-          Using API key from backend/config.yml
+          {{ hasOpenAIApiKey ? 'Using OpenAI API key from Admin (session only)' : 'No session key set. Open Admin in the top bar to add an OpenAI API key.' }}
         </small>
         <small class="help-text" v-if="selectedProvider === 'bedrock'">
           Using AWS credentials from your profile
@@ -127,6 +127,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useKBStore } from '../stores/kb'
 import { useToast } from '../composables/useToast'
+import { useSessionApiKey } from '../composables/useSessionApiKey'
 import api from '../services/api'
 
 export default {
@@ -135,7 +136,7 @@ export default {
     const router = useRouter()
     const store = useKBStore()
     const toast = useToast()
-    
+    const { openaiApiKey, hasOpenAIApiKey } = useSessionApiKey()
     const step = ref(1)
     const urlInput = ref('')
     const scannedUrl = ref('')  // Store the scanned URL for KB name
@@ -330,13 +331,12 @@ export default {
           name: kbName.value,
           model_id: selectedModel.value,
           provider: selectedProvider.value,
-          api_key: null,  // Always null - backend will use config
           documents: availablePdfs.map(pdf => ({
             filename: pdf.filename,
             url: pdf.url
           }))
-        })
-        
+        }, selectedProvider.value === 'openai' ? openaiApiKey.value : null)
+
         createdKBId.value = response.data.id
         successMessage.value = response.data.message
         step.value = 3
@@ -364,6 +364,7 @@ export default {
       pdfs,
       selectedPdfs,
       models,
+      hasOpenAIApiKey,
       allSelected,
       canCreate,
       validationResults,

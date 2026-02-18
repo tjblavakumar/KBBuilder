@@ -55,6 +55,7 @@ class CreateKBResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    api_key: Optional[str] = None
 
 class SourceReference(BaseModel):
     filename: str

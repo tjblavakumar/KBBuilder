@@ -47,9 +47,10 @@
 </template>
 
 <script>
-import { ref, onMounted, nextTick, computed } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from '../composables/useToast'
+import { useSessionApiKey } from '../composables/useSessionApiKey'
 import api from '../services/api'
 import { marked } from 'marked'
 
@@ -64,8 +65,10 @@ export default {
   setup() {
     const route = useRoute()
     const toast = useToast()
+    const { openaiApiKey, hasOpenAIApiKey } = useSessionApiKey()
     const kbId = ref(route.params.id)
     const kbName = ref('Loading...')
+    const kbProvider = ref('')
     const messages = ref([])
     const userInput = ref('')
     const loading = ref(false)
@@ -80,6 +83,7 @@ export default {
       try {
         const response = await api.getKB(kbId.value)
         kbName.value = response.data.name
+        kbProvider.value = response.data.provider
       } catch (err) {
         console.error('Failed to load KB info:', err)
         kbName.value = 'Knowledge Base'
@@ -108,7 +112,15 @@ export default {
       loading.value = true
 
       try {
-        const response = await api.chat(kbId.value, message)
+        if (kbProvider.value === 'openai' && !hasOpenAIApiKey.value) {
+          throw new Error('OpenAI API key not set for this session. Use Admin in the top bar to set it.')
+        }
+
+        const response = await api.chat(
+          kbId.value,
+          message,
+          kbProvider.value === 'openai' ? openaiApiKey.value : null
+        )
         messages.value.push({
           user: message,
           bot: response.data.response,
@@ -119,10 +131,10 @@ export default {
       } catch (err) {
         messages.value.push({
           user: message,
-          bot: 'Error: Failed to get response. Please try again.',
+          bot: `Error: ${err?.response?.data?.detail || err.message || 'Failed to get response. Please try again.'}`,
           sources: []
         })
-        toast.error('Failed to get response')
+        toast.error(err?.response?.data?.detail || err.message || 'Failed to get response')
       } finally {
         loading.value = false
       }

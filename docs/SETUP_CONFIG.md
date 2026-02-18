@@ -1,68 +1,57 @@
-# Setting Up Your API Key
+# OpenAI Key Setup (Session-Only)
 
-You have two options to provide your OpenAI API key:
+This app now uses a **session-only OpenAI key flow**.
 
-## Option 1: Config File (Recommended)
+- Enter the key in **Admin** (top navigation)
+- The key is validated immediately
+- The key is kept only in browser memory for the current session
+- The app does not persist new keys to DB/config
 
-1. **Copy the example config:**
+## Steps
+
+1. Start the app:
    ```bash
-   cd backend
-   cp config.example.yml config.yml
+   ./start.sh
    ```
+2. Open: `http://localhost:5173`
+3. Click **Admin** in the top bar
+4. Paste your OpenAI API key (`sk-...` or `sk-proj-...`)
+5. Click **Save**
+6. Wait for validation success toast (`OpenAI API key validated for this session`)
 
-2. **Edit config.yml:**
-   ```bash
-   nano config.yml
-   # or
-   vim config.yml
-   ```
+You should now see `OpenAI Ready` in the top nav.
 
-3. **Add your API key:**
-   ```yaml
-   openai:
-     api_key: "sk-proj-your-actual-key-here"
-     default_model: "gpt-4o-mini"
-   ```
+## How It Works
 
-4. **Save and restart:**
-   ```bash
-   cd ..
-   ./stop.sh
-   pip install pyyaml==6.0.1
-   ./start-simple.sh
-   ```
-
-5. **Create KB without entering key:**
-   - The app will automatically use the key from config.yml
-   - You can leave the API key field empty in the UI
-
-## Option 2: Enter Manually (Each Time)
-
-1. When creating a KB, enter your API key in the form
-2. The key will be stored with that specific KB
-3. You'll need to enter it again for new KBs
-
-## Getting Your OpenAI API Key
-
-1. Go to https://platform.openai.com/api-keys
-2. Sign in or create an account
-3. Click "Create new secret key"
-4. Copy the key (starts with `sk-proj-...` or `sk-...`)
-5. Save it securely!
+- Frontend attaches `X-Session-OpenAI-Key` to API requests during the session
+- Backend validates OpenAI calls using that key
+- If missing/invalid, backend returns explicit 4xx errors
 
 ## Troubleshooting
 
-### "Incorrect API key provided"
-- Make sure you copied the entire key
-- Check for extra spaces
-- Verify the key is active in your OpenAI dashboard
-- Make sure you have credits in your account
+### "OpenAI API key required for this session"
+- Open **Admin** and set your key again
+- Ensure you clicked **Save** and saw validation success
 
-### Config file not working
-- Make sure the file is named `config.yml` (not `config.example.yml`)
-- Check the YAML syntax (indentation matters!)
-- Restart the backend after editing config
+### "OpenAI API key is invalid"
+- Check for copy/paste issues or trailing spaces
+- Regenerate key at https://platform.openai.com/api-keys
 
-### Still having issues?
-- Check backend.log for detailed errors
-- Make sure pyyaml is installed: `pip install pyyaml==6.0.1`
+### "OpenAI quota exceeded or billing issue"
+- Check credits/billing in your OpenAI account
+
+### "Unable to reach OpenAI API"
+- Check internet/DNS from the backend machine
+
+## Optional Legacy Cleanup
+
+If you want to remove older keys that may have been stored previously:
+
+```bash
+cd backend
+../venv/bin/python cleanup_api_keys.py
+```
+
+or call:
+
+`POST /api/admin/cleanup-api-keys`
